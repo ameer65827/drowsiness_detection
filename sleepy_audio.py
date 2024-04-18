@@ -5,8 +5,16 @@ from imutils import face_utils
 import pygame
 
 cap = cv2.VideoCapture(0)
+# Set resolution to 720p
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+
+# Set frame rate to 30 FPS
+cap.set(cv2.CAP_PROP_FPS,30)
+
+#Initializing the face detector and landmark detector
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+predictor = dlib.shape_predictor("/home/pi/fp/shape_predictor_68_face_landmarks.dat")
 
 sleep = 0
 drowsy = 0
@@ -15,11 +23,11 @@ status = ""
 color = (0, 0, 0)
 
 # Initialize pygame
-pygame.mixer.init()
+pygame.init()
 
 # Load audio files
 #drowsy_sound = pygame.mixer.Sound("wakeup.wav")
-sleeping_sound = pygame.mixer.Sound("wakeup.wav")
+pygame.mixer.music.load("/home/pi/fp/wakeup3.mp3")
 
 def compute(ptA, ptB):
     dist = np.linalg.norm(ptA - ptB)
@@ -42,6 +50,7 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     faces = detector(gray)
+    face_frame = None  # Initialize face_frame to None
     for face in faces:
         x1 = face.left()
         y1 = face.top()
@@ -64,8 +73,10 @@ while True:
             if sleep > 6:
                 status = "SLEEPING !!!"
                 color = (255, 0, 0)
-                sleeping_sound.play()
-                pygame.time.wait(int(sleeping_sound.get_length()*1000))
+                pygame.mixer.music.play()
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+                #pygame.time.wait(int(pygame.mixer.music.get_length()*1000))
         elif left_blink == 1 or right_blink == 1:
             sleep = 0
             active = 0
@@ -89,7 +100,8 @@ while True:
             cv2.circle(face_frame, (x, y), 1, (255, 255, 255), -1)
 
     cv2.imshow("Frame", frame)
-    cv2.imshow("Result of detector", face_frame)
+    if face_frame is not None and face_frame.shape[0] > 0 and face_frame.shape[1] > 0:  # Add this additional check
+        cv2.imshow("Result of detector", face_frame)
     key = cv2.waitKey(1)
     if key == 27:
         break
